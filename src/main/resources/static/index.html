@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style type="text/css">
+        body {
+            margin: 100px;
+        }
+        /*.inner-table td, .inner-table th {
+            border: none;
+            background-color: #ebeef5;
+        }
+        .inner-table .el-table__empty-block {
+            display: none;
+        }*/
+        .el-table__expanded-cell {
+            background-color: #F5F7FA;
+        }
+        .button-group {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="button-group">
+            <el-button type="primary" icon="el-icon-plus" @click="openMachineDialog('add')">增加</el-button>
+            <el-button type="primary" icon="el-icon-edit" :disabled="machineSelects.length !=1 " @click="openMachineDialog('edit')">编辑</el-button>
+            <el-button type="primary" :disabled="machineSelects.length == 0" icon="el-icon-delete" @click="confirmDeleteMachine()">删除</el-button>
+        </div>
+        <el-table ref="multipleTable" :data="machines" stripe border  tooltip-effect="dark" style="width: 100%" @selection-change="handleSelectionChange">
+            <el-table-column type="expand" width="30">
+                <template slot-scope="props">
+                    <el-button type="primary" size="small" @click="openVirtualMachineDialog('add', props.row)">增加虚拟机</el-button>
+                    <el-table :data="props.row.virtualMachines" class="inner-table" border>
+                        <!-- <el-table-column type="selection" width="55"></el-table-column> -->
+                        <el-table-column prop="ip" label="虚拟机IP"></el-table-column>
+                        <el-table-column prop="usages" label="用途"></el-table-column>
+                        <el-table-column>
+                            <template slot="header" slot-scope="scope">
+                                操作
+                            </template>
+                            <template slot-scope="scope">
+                                <el-button size="mini" icon="el-icon-edit" @click="openVirtualMachineDialog('update', props.row, scope.$index, scope.row)">编辑</el-button>
+                                <el-button size="mini" icon="el-icon-delete" @click="confirmDeleteVirtualMachine(scope.$index, scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </template>
+            </el-table-column>
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column prop="serialNumber" label="资产编号" width="120"></el-table-column>
+            <el-table-column prop="kind" label="类型" width="120"></el-table-column>
+            <el-table-column prop="bmcIP" label="BMCIP" width="120"></el-table-column>
+            <el-table-column prop="businessIP" label="宿主机IP" width="120"></el-table-column>
+            <el-table-column prop="owner" label="挂账人" width="120"></el-table-column>
+            <el-table-column prop="user" label="使用人" width="120"></el-table-column>
+            <el-table-column prop="usages" label="用途" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="address" label="地址" show-overflow-tooltip></el-table-column>
+        </el-table>
+
+        <!-- 增加/编辑宿主机弹窗 -->
+        <el-dialog :title="machineDialog.title" :visible.sync="machineDialog.visible" :close-on-click-modal=false>
+            <el-form :model="machineDialog.machine" label-position="left" label-width="80px">
+                <el-form-item label="资产编号">
+                    <el-input v-model="machineDialog.machine.serialNumber" placeholder="请输入资产编号"></el-input>
+                </el-form-item>
+                <el-form-item label="类型" required>
+                    <el-select v-model="machineDialog.machine.kind" placeholder="请选择机器类型">
+                        <el-option v-for="item in machineKinds" :key="item" :label="item" :value="item"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="BMCIP">
+                    <el-input v-model="machineDialog.machine.bmcIP" placeholder="请输入BMCIP"></el-input>
+                </el-form-item>
+                <el-form-item label="宿主机IP">
+                    <el-input v-model="machineDialog.machine.businessIP" placeholder="请输入宿主机IP"></el-input>
+                </el-form-item>
+                <el-form-item label="挂账人">
+                    <el-input v-model="machineDialog.machine.owner" placeholder="请输入挂账人"></el-input>
+                </el-form-item>
+                <el-form-item label="使用人">
+                    <el-input v-model="machineDialog.machine.user" placeholder="请输入使用人"></el-input>
+                </el-form-item>
+                <el-form-item label="用途">
+                    <el-input v-model="machineDialog.machine.usages" placeholder="请输入机器用途"></el-input>
+                </el-form-item>
+                <el-form-item label="地址">
+                    <el-input v-model="machineDialog.machine.address" placeholder="请输入实验室位置"></el-input>
+                </el-form-item>
+                <el-form-item align="right">
+                    <el-button type="primary" @click="submitMachine()">提交</el-button>
+                    <el-button @click="machineDialog.visible=false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+
+        <!-- 增加/编辑虚拟机弹窗 -->
+        <el-dialog :title="virtualMachineDialog.title" :visible.sync="virtualMachineDialog.visible" :close-on-click-modal=false>
+            <el-form :model="virtualMachineDialog.virtualMachine" label-position="left" label-width="80px">
+                <el-form-item label="虚拟机IP" required>
+                    <el-input v-model="virtualMachineDialog.virtualMachine.ip" placeholder="请输入虚拟机IP" required></el-input>
+                </el-form-item>
+                <el-form-item label="用途">
+                    <el-input v-model="virtualMachineDialog.virtualMachine.usages" placeholder="请输入机器用途"></el-input>
+                </el-form-item>
+                <el-form-item align="right">
+                    <el-button type="primary" @click="submitVirtualMachine()">提交</el-button>
+                    <el-button @click="virtualMachineDialog.visible=false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+    </div>
+</body>
+<!-- import Vue before Element -->
+<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<!-- import JavaScript -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            machineKinds: ["RH2288", "IBM", "E9000", "磁阵", "计算云", "其他"],
+            machines: [],
+            machineSelects: [],
+            machineDialog: {
+                visible: false,
+                title: "",
+                type: "",
+                machine: {
+                    serialNumber: "",
+                    kind: "",
+                    bmcIP: "",
+                    businessIP: "",
+                    address: "",
+                    owner: "",
+                    user: "",
+                    usages: ""
+                }
+            },
+            virtualMachineDialog: {
+                visible: false,
+                title: "",
+                type: "",
+                virtualMachine: {
+                    machineId: "",
+                    ip: "",
+                    usages: ""
+                }
+            }
+    },
+    mounted: function() {
+        this.getAllMachines();
+    },
+    methods: {
+        handleSelectionChange(val) {
+            this.machineSelects = val;
+        },
+        getAllMachines() {
+            var _this = this;
+            axios.get("/machine").then(function(response) {
+                _this.machines = response.data;
+            })
+        },
+        openMachineDialog(type) {
+            this.machineDialog.visible = true;
+            this.machineDialog.type = type;
+            if (type == "add") {
+                this.machineDialog.title = "添加机器";
+                this.machineDialog.machine = {};
+            } else {
+                this.machineDialog.title = "编辑机器";
+                this.machineDialog.machine = this.copyObject(this.machineSelects[0]);
+            }
+        },
+        submitMachine() {
+            if (this.machineDialog.type == "add") {
+                this.addMachine(this.machineDialog.machine);
+            } else {
+                this.updateMachine(this.machineDialog.machine);
+            }
+        },
+        addMachine(machine) {
+            var _this = this;
+            axios.post("/machine", machine).then(function(response) {
+                if (response.data == "SUCCESS") {
+                    _this.handleMachineSuccess();
+                } else {
+                    _this.handleMachineError(response.data)
+                }
+            }).catch(function(error) {
+                _this.handleMachineError("OPERATION_FAIL");
+            });
+        },
+        updateMachine(machine) {
+            var _this = this;
+            axios.put("/machine", machine).then(function(response) {
+                if (response.data == "SUCCESS") {
+                    _this.handleMachineSuccess();
+                } else {
+                    _this.handleMachineError(response.data)
+                }
+            }).catch(function(error) {
+                _this.handleMachineError("OPERATION_FAIL");
+            });
+        },
+        openVirtualMachineDialog(type, parentRow, index, row) {
+            this.virtualMachineDialog.visible = true;
+            this.virtualMachineDialog.type = type;
+            if (type == "add") {
+                this.virtualMachineDialog.title = "添加虚拟机";
+                this.virtualMachineDialog.virtualMachine = {};
+                this.virtualMachineDialog.virtualMachine.machineId = parentRow.id;
+            } else {
+                this.virtualMachineDialog.title = "编辑虚拟机";
+                this.virtualMachineDialog.virtualMachine = this.copyObject(row);
+            }
+        },
+        confirmDeleteMachine() {
+            var _this = this;
+            this.$confirm('此操作将删除选中的机器以及选中机器下的所有虚拟机, 是否继续?', '警告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                var ids = _this.machineSelects.map(function(item) {
+                    return item.id;
+                });
+
+                axios.delete("/machine", {data: ids}).then(function(response) {
+                    if (response.status == 200) {
+                        _this.handleMachineSuccess();
+                    } else {
+                        _this.handleMachineError();
+                    }
+                }).catch(function(error) {
+                    _this.handleMachineError("OPERATION_FAIL");
+                });
+            }).catch(() => {
+                      
+            });
+        },
+        handleMachineSuccess() {
+            this.getAllMachines();
+            this.machineDialog.visible = false;
+            this.$alert("操作成功", "提示", {
+                confirmButtonText: "确定",
+                type: "success"
+            });
+        },
+        handleMachineError(type) {
+            var errorMessage = "未知错误";
+            if (type == "BMCIP_EXIST") {
+                errorMessage = "BMCIP已经存在";
+            } else if (type == "BUSINESSIP_EXIST") {
+                errorMessage = "宿主机IP已经存在";
+            } else if (type == "SERIALNUMBER_EXIST") {
+                errorMessage = "资产编号已经存在";
+            } else if (type == "VIRTUALIP_EMPTY") {
+                errorMessage = "虚拟机IP为空"
+            } else if (type == "VIRTUALIP_EXIST") {
+                errorMessage = "虚拟机IP已经存在"
+            } else if (type == "OPERATION_FAIL") {
+                errorMessage = "操作失败";
+            }
+
+            this.$alert(errorMessage, "错误", {
+                confirmButtonText: "确定",
+                type: "error"
+            });
+        },
+        handleVirtualMachineSuccess() {
+            this.getAllMachines();
+            this.virtualMachineDialog.visible = false;
+            this.$alert("操作成功", "提示", {
+                confirmButtonText: "确定",
+                type: "success"
+            });
+        },
+        submitVirtualMachine() {
+            if (this.virtualMachineDialog.type == "add") {
+                this.addVirtualMachine(this.virtualMachineDialog.virtualMachine);
+            } else {
+                this.updateVirtualMachine(this.virtualMachineDialog.virtualMachine);
+            }
+        },
+        addVirtualMachine(virtualMachine) {
+            var _this = this;
+            axios.post("/virtualMachine", virtualMachine).then(function(response) {
+                if (response.data == "SUCCESS") {
+                    _this.handleVirtualMachineSuccess();
+                } else {
+                    _this.handleMachineError(response.data)
+                }
+            }).catch(function(error) {
+                _this.handleMachineError("OPERATION_FAIL");
+            });
+        },
+        updateVirtualMachine(virtualMachine) {
+            var _this = this;
+            axios.put("/virtualMachine", virtualMachine).then(function(response) {
+                if (response.data == "SUCCESS") {
+                    _this.handleVirtualMachineSuccess();
+                } else {
+                    _this.handleMachineError(response.data)
+                }
+            }).catch(function(error) {
+                _this.handleMachineError("OPERATION_FAIL");
+            });
+        },
+        confirmDeleteVirtualMachine(index, row) {
+            var _this = this;
+            this.$confirm('确定删除虚拟机?', '警告', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                axios.delete("/virtualMachine", {data: row}).then(function(response) {
+                    if (response.status == 200) {
+                        _this.handleVirtualMachineSuccess();
+                    } else {
+                        _this.handleMachineError();
+                    }
+                }).catch(function(error) {
+                    _this.handleMachineError("OPERATION_FAIL");
+                });
+            }).catch(() => {
+                      
+            });
+        },
+        copyObject(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+    }
+    });
+  </script>
+</html>

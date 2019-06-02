@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guozhchun.mapper.VirtualMachineMapper">
+    <select id="queryVirtualMachinesByExactCondition" parameterType="com.guozhchun.entity.VirtualMachine" resultType="com.guozhchun.entity.VirtualMachine">
+        select machine_id as machineId,
+               ip as ip,
+               usages as usages
+        from virtual_machine
+        <where>
+            <if test="machineId != null">
+                machine_id = #{machineId}
+            </if>
+            <if test="ip != null">
+                and ip = #{ip}
+            </if>
+        </where>
+    </select>
+    
+    <insert id="addVirtualMachine" parameterType="com.guozhchun.entity.VirtualMachine">
+        insert into virtual_machine(machine_id, ip, usages) values(#{machineId}, #{ip}, #{usages})
+    </insert>
+
+    <update id="updateVirtualMachine" parameterType="com.guozhchun.entity.VirtualMachine">
+        update virtual_machine
+        <set>
+            <if test="ip != null">
+                ip = #{ip},
+            </if>
+            <if test="usages != null">
+                usages = #{usages}
+            </if>
+        </set>
+        where machine_id = #{machineId}
+              and ip = #{ip}
+    </update>
+
+    <delete id="deleteVirtualMachine" parameterType="com.guozhchun.entity.VirtualMachine">
+        delete from virtual_machine where machine_id = #{machineId} and ip = #{ip}
+    </delete>
+</mapper>

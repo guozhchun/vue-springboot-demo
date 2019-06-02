@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guozhchun.mapper.MachineMapper">
+    <resultMap id="machines" type="com.guozhchun.entity.Machine">
+        <id property="id" column="id"></id>
+        <result property="serialNumber" column="serialNumber"></result>
+        <result property="kind" column="kind"></result>
+        <result property="bmcIP" column="bmcIP"></result>
+        <result property="businessIP" column="businessIP"></result>
+        <result property="address" column="address"></result>
+        <result property="owner" column="owner"></result>
+        <result property="user" column="user"></result>
+        <result property="usages" column="usages"></result>
+        <collection property="virtualMachines" ofType="com.guozhchun.entity.VirtualMachine">
+            <result property="machineId" column="machineId"></result>
+            <result property="ip" column="ip"></result>
+            <result property="usages" column="virtualMachineUsages"></result>
+        </collection>
+    </resultMap>
+    
+    <select id="queryMachines" resultMap="machines" parameterType="com.guozhchun.vo.QueryCondition">
+        select t1.id as id,
+               t1.serial_number as serialNumber,
+               t1.kind as kind,
+               t1.bmc_ip as bmcIP,
+               t1.business_ip as businessIP,
+               t1.address as address,
+               t1.owner as owner,
+               t1.user as user,
+               t1.usages as usages,
+               t2.machine_id as machineId,
+               t2.ip as ip,
+               t2.usages as virtualMachineUsages
+        from machine t1
+        left join virtual_machine t2 on t1.id = t2.machine_id
+        where 1 = 1
+        <if test="kind != null">
+            and kind = #{kind}
+        </if>
+        <if test="serialNumber != null">
+            and serial_number like concat('%', #{serialNumber}, '%')
+        </if>
+        <if test="bmcIP != null">
+            and bmc_ip like concat('%', #{bmcIP}, '%')
+        </if>
+        <if test="businessIP != null">
+            and business_ip like concat('%', #{businessIP}, '%')
+        </if>
+        <if test="owner != null">
+            and owner like concat('%', #{owner}, '%')
+        </if>
+        <if test="user != null">
+            and user like concat('%', #{user}, '%')
+        </if>
+        <if test="virtualMachineIP != null">
+            and ip like concat('%', #{virtualMachineIP}, '%')
+        </if>
+        <if test="startPageNum != 0 and pagePerCount != 0">
+            limit #{startPageNum}, #{pagePerCount}
+        </if>
+    </select>
+    
+    <select id="queryNotIdMachinesWithOrCondition" resultType="com.guozhchun.entity.Machine" parameterType="com.guozhchun.vo.QueryCondition">
+        select t1.id as id,
+               t1.serial_number as serialNumber,
+               t1.kind as kind,
+               t1.bmc_ip as bmcIP,
+               t1.business_ip as businessIP,
+               t1.address as address,
+               t1.owner as owner,
+               t1.user as user,
+               t1.usages as usages
+        from machine t1
+        <where>
+            <if test="id != null">
+                id != #{id}
+                and (
+            </if>
+            <if test="serialNumber != null">
+                serial_number = #{serialNumber}
+            </if>
+            <if test="bmcIP != null">
+                or bmc_ip = #{bmcIP}
+            </if>
+            <if test="businessIP != null">
+                or business_ip = #{businessIP}
+            </if>
+            <if test="id != null">
+                )
+            </if>
+        </where>
+    </select>
+
+    <insert id="addMachine" parameterType="com.guozhchun.entity.Machine">
+        insert into machine(serial_number, kind, bmc_ip, business_ip, address, owner, user, usages)
+                     values(#{serialNumber}, #{kind}, #{bmcIP}, #{businessIP}, #{address}, #{owner}, #{user}, #{usages})
+    </insert>
+
+    <update id="updateMachine" parameterType="com.guozhchun.entity.Machine">
+        update machine
+        <set>
+            <if test="kind != null">
+                kind = #{kind},
+            </if>
+            <if test="serialNumber != null">
+                serial_number = #{serialNumber},
+            </if>
+            <if test="bmcIP != null">
+                bmc_ip = #{bmcIP},
+            </if>
+            <if test="businessIP != null">
+                business_ip = #{businessIP},
+            </if>
+            <if test="owner != null">
+                owner = #{owner},
+            </if>
+            <if test="user != null">
+                user = #{user},
+            </if>
+            <if test="address != null">
+                address = #{address},
+            </if>
+            <if test="usages != null">
+                usages = #{usages}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteMachines" parameterType="java.util.List">
+        delete machine, virtual_machine
+        from machine, virtual_machine
+        where machine.id = virtual_machine.machine_id
+        and machine.id in
+        <foreach collection="list"  item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
