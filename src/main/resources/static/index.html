@@ -19,18 +19,29 @@
             background-color: #F5F7FA;
         }
         .button-group {
+            margin-top: 10px;
             margin-bottom: 10px;
+        }
+        .el-collapse-item__header {
+            font-size: 18px;
+            background-color: gainsboro;
+            padding-left: 10px;
+        }
+        .el-collapse-item__wrap {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div id="app">
+        <query-block :machine-kinds="machineKinds" v-on:get-data="getData"></query-block>
+
         <div class="button-group">
             <el-button type="primary" icon="el-icon-plus" @click="openMachineDialog('add')">增加</el-button>
             <el-button type="primary" icon="el-icon-edit" :disabled="machineSelects.length !=1 " @click="openMachineDialog('edit')">编辑</el-button>
             <el-button type="primary" :disabled="machineSelects.length == 0" icon="el-icon-delete" @click="confirmDeleteMachine()">删除</el-button>
         </div>
-        <el-table ref="multipleTable" :data="machines" stripe border  tooltip-effect="dark" style="width: 100%" @selection-change="handleSelectionChange">
+        <el-table ref="multipleTable" :data="queryResult.machineList" stripe border  tooltip-effect="dark" style="width: 100%" @selection-change="handleSelectionChange">
             <el-table-column type="expand" width="30">
                 <template slot-scope="props">
                     <el-button type="primary" size="small" @click="openVirtualMachineDialog('add', props.row)">增加虚拟机</el-button>
@@ -60,6 +71,7 @@
             <el-table-column prop="usages" label="用途" show-overflow-tooltip></el-table-column>
             <el-table-column prop="address" label="地址" show-overflow-tooltip></el-table-column>
         </el-table>
+        <el-pagination align="right" @current-change="handleCurrentChange" background :page-sizes="[10, 50, 100, 500]" :page-size.sync="queryCondition.pagePerCount" layout="total, sizes, prev, pager, next, jumper" :total="queryResult.totalNum"></el-pagination>
 
         <!-- 增加/编辑宿主机弹窗 -->
         <el-dialog :title="machineDialog.title" :visible.sync="machineDialog.visible" :close-on-click-modal=false>
@@ -119,12 +131,20 @@
 <!-- import JavaScript -->
 <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="component/query-block.js"></script>
 <script>
     new Vue({
         el: '#app',
+        components: {
+            "query-block": queryBlock
+        },
         data: {
             machineKinds: ["RH2288", "IBM", "E9000", "磁阵", "计算云", "其他"],
-            machines: [],
+            queryResult: {},
+            queryCondition: {
+                startPageNum: 1,
+                pagePerCount: 10
+            },
             machineSelects: [],
             machineDialog: {
                 visible: false,
@@ -152,6 +172,13 @@
                 }
             }
     },
+    watch: {
+        'queryCondition.pagePerCount': function(newVal, oldVal) {
+            this.queryCondition.pagePerCount = newVal;
+            this.queryCondition.startPageNum = 1;
+            this.getMachines(this.queryCondition);
+        }
+    },
     mounted: function() {
         this.getAllMachines();
     },
@@ -159,11 +186,22 @@
         handleSelectionChange(val) {
             this.machineSelects = val;
         },
+        getData(queryCondition) {
+            this.queryCondition = this.copyObject(queryCondition);
+            this.getMachines(this.queryCondition);
+        },
         getAllMachines() {
+            this.getMachines(this.queryCondition)
+        },
+        getMachines(queryCondition) {
             var _this = this;
-            axios.get("/machine").then(function(response) {
-                _this.machines = response.data;
-            })
+            axios.get("/machine", {params: {querys: queryCondition}}).then(function(response) {
+                _this.queryResult = response.data;
+            });
+        },
+        handleCurrentChange(val) {
+            this.queryCondition.startPageNum = val;
+            this.getMachines(this.queryCondition);
         },
         openMachineDialog(type) {
             this.machineDialog.visible = true;

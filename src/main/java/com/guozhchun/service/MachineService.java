@@ -17,8 +17,23 @@ public class MachineService
     @Autowired
     private MachineMapper machineMapper;
 
+    public int getMachineCount(QueryCondition queryCondition)
+    {
+        return machineMapper.queryMachineCount(queryCondition);
+    }
+
     public List<Machine> getMachines(QueryCondition queryCondition)
     {
+        if (queryCondition.getPagePerCount() == 0)
+        {
+            queryCondition.setPagePerCount(10);
+        }
+
+        if (queryCondition.getStartPageNum() == 0)
+        {
+            queryCondition.setStartPageNum(1);
+        }
+
         return machineMapper.queryMachines(queryCondition);
     }
 

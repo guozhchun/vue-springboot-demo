@@ -12,6 +12,8 @@ import com.guozhchun.vo.QueryCondition;
 @Repository
 public interface MachineMapper
 {
+    int queryMachineCount(QueryCondition queryCondition);
+
     List<Machine> queryMachines(QueryCondition queryCondition);
 
     List<Machine> queryNotIdMachinesWithOrCondition(QueryCondition queryCondition);

@@ -19,6 +19,7 @@
     </resultMap>
     
     <select id="queryMachines" resultMap="machines" parameterType="com.guozhchun.vo.QueryCondition">
+        <bind name="offset" value="(startPageNum - 1) * pagePerCount"></bind>
         select t1.id as id,
                t1.serial_number as serialNumber,
                t1.kind as kind,
@@ -32,13 +33,47 @@
                t2.ip as ip,
                t2.usages as virtualMachineUsages
         from machine t1
+        inner join (select distinct(t3.id)
+                    from machine t3
+                    left join virtual_machine t4 on t3.id = t4.machine_id
+                    where 1 = 1
+                    <if test="kind != null and kind != ''">
+                        and kind = #{kind}
+                    </if>
+                    <if test="serialNumber != null">
+                        and upper(serial_number) like upper(concat('%', #{serialNumber}, '%'))
+                    </if>
+                    <if test="bmcIP != null">
+                        and bmc_ip like concat('%', #{bmcIP}, '%')
+                    </if>
+                    <if test="businessIP != null">
+                        and business_ip like concat('%', #{businessIP}, '%')
+                    </if>
+                    <if test="owner != null">
+                        and owner like concat('%', #{owner}, '%')
+                    </if>
+                    <if test="user != null">
+                        and user like concat('%', #{user}, '%')
+                    </if>
+                    <if test="virtualMachineIP != null">
+                        and ip like concat('%', #{virtualMachineIP}, '%')
+                    </if>
+                    order by t3.id
+                    limit #{offset}, #{pagePerCount}) as t5 on t1.id = t5.id
+        left join virtual_machine t2 on t1.id = t2.machine_id
+        order by t1.id
+    </select>
+
+    <select id="queryMachineCount" resultType="int" parameterType="com.guozhchun.vo.QueryCondition">
+        select count(distinct(t1.id))
+        from machine t1
         left join virtual_machine t2 on t1.id = t2.machine_id
         where 1 = 1
-        <if test="kind != null">
+        <if test="kind != null and kind != ''">
             and kind = #{kind}
         </if>
         <if test="serialNumber != null">
-            and serial_number like concat('%', #{serialNumber}, '%')
+            and upper(serial_number) like upper(concat('%', #{serialNumber}, '%'))
         </if>
         <if test="bmcIP != null">
             and bmc_ip like concat('%', #{bmcIP}, '%')
@@ -54,9 +89,6 @@
         </if>
         <if test="virtualMachineIP != null">
             and ip like concat('%', #{virtualMachineIP}, '%')
-        </if>
-        <if test="startPageNum != 0 and pagePerCount != 0">
-            limit #{startPageNum}, #{pagePerCount}
         </if>
     </select>
     
