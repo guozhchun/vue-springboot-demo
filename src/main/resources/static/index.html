@@ -6,15 +6,10 @@
     <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
     <style type="text/css">
         body {
-            margin: 100px;
+            margin-left: 100px;
+            margin-right: 100px;
+            margin-top: 0px;
         }
-        /*.inner-table td, .inner-table th {
-            border: none;
-            background-color: #ebeef5;
-        }
-        .inner-table .el-table__empty-block {
-            display: none;
-        }*/
         .el-table__expanded-cell {
             background-color: #F5F7FA;
         }
@@ -30,13 +25,25 @@
         .el-collapse-item__wrap {
             margin-top: 10px;
         }
+        .login-btn-group {
+            position: fixed;
+            width: calc(100% - 200px);
+            z-index: 999;
+            background-color: white;
+            border-bottom: 1px solid #eaeefb;
+        }
+        .padding-login {
+            padding-top: 40px;
+        }
     </style>
 </head>
 <body>
     <div id="app">
+        <login-block v-on:get-user="getUser"></login-block>
+        <div class="padding-login"></div>
         <query-block :machine-kinds="machineKinds" v-on:get-data="getData"></query-block>
 
-        <div class="button-group">
+        <div class="button-group" v-if="user=='admin'">
             <el-button type="primary" icon="el-icon-plus" @click="openMachineDialog('add')">增加</el-button>
             <el-button type="primary" icon="el-icon-edit" :disabled="machineSelects.length !=1 " @click="openMachineDialog('edit')">编辑</el-button>
             <el-button type="primary" :disabled="machineSelects.length == 0" icon="el-icon-delete" @click="confirmDeleteMachine()">删除</el-button>
@@ -44,12 +51,12 @@
         <el-table ref="multipleTable" :data="queryResult.machineList" stripe border  tooltip-effect="dark" style="width: 100%" @selection-change="handleSelectionChange">
             <el-table-column type="expand" width="30">
                 <template slot-scope="props">
-                    <el-button type="primary" size="small" @click="openVirtualMachineDialog('add', props.row)">增加虚拟机</el-button>
+                    <el-button type="primary" size="small" @click="openVirtualMachineDialog('add', props.row)" v-if="user=='admin'">增加虚拟机</el-button>
                     <el-table :data="props.row.virtualMachines" class="inner-table" border>
                         <!-- <el-table-column type="selection" width="55"></el-table-column> -->
                         <el-table-column prop="ip" label="虚拟机IP"></el-table-column>
                         <el-table-column prop="usages" label="用途"></el-table-column>
-                        <el-table-column>
+                        <el-table-column v-if="user=='admin'">
                             <template slot="header" slot-scope="scope">
                                 操作
                             </template>
@@ -131,14 +138,17 @@
 <!-- import JavaScript -->
 <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="component/login-block.js"></script>
 <script src="component/query-block.js"></script>
 <script>
     new Vue({
         el: '#app',
         components: {
-            "query-block": queryBlock
+            "query-block": queryBlock,
+            "login-block": loginBlock
         },
         data: {
+            user: localStorage.getItem("loginUserName"),
             machineKinds: ["RH2288", "IBM", "E9000", "磁阵", "计算云", "其他"],
             queryResult: {},
             queryCondition: {
@@ -180,11 +190,25 @@
         }
     },
     mounted: function() {
-        this.getAllMachines();
+        this.init();
     },
     methods: {
+        init() {
+            // 设置请求头中增加token，用于认证是否登录
+            axios.interceptors.request.use(function (config) {
+                config.headers.token = localStorage.getItem("token");
+                return config;
+            }, function (error) {
+                return Promise.reject(error);
+            });
+
+            this.getAllMachines();
+        },
         handleSelectionChange(val) {
             this.machineSelects = val;
+        },
+        getUser(data) {
+            this.user = data;
         },
         getData(queryCondition) {
             this.queryCondition = this.copyObject(queryCondition);
