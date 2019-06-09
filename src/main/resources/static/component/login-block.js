@@ -17,8 +17,8 @@ var loginBlock = {
                     _this.handleError(response.data);
                     _this.$emit("get-user", "");
                 } else {
-                    _this.$alert("登录成功", "提示", {
-                        confirmButtonText: "确定",
+                    _this.$alert(_this.$t('message.loginSuccess'), _this.$t('message.prompt'), {
+                        confirmButtonText: _this.$t('message.confirm'),
                         type: "success"
                     });
                     localStorage.setItem("token", response.data);
@@ -34,9 +34,9 @@ var loginBlock = {
         },
         logout() {
             var _this = this;
-            this.$confirm('确定要退出登录?', '警告', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
+            this.$confirm(this.$t('message.tips.dialog.logout'), this.$t('message.warning'), {
+                confirmButtonText: this.$t('message.confirm'),
+                cancelButtonText: this.$t('message.cancel'),
                 type: 'warning'
             }).then(() => {
                 axios.post("/logout").then(function(response) {
@@ -51,24 +51,27 @@ var loginBlock = {
             }).catch(() => {
             });
         },
+        changeLanguaue(lang) {
+            this.$i18n.locale = lang;
+        },
         openDialog() {
             this.visible = true;
             this.user = {};
         },
         handleError(type) {
-            var errorMessage = "操作失败";
+            var errorMessage = this.$t('message.tips.errors.fail');
             if (type == "USERNAME_EMPTY") {
-                errorMessage = "用户名为空";
+                errorMessage = this.$t('message.tips.errors.usernameEmpty');
             } else if (type == "PASSWORD_EMPYT") {
-                errorMessage = "密码为空";
+                errorMessage = this.$t('message.tips.errors.passwordEmpty');
             } else if (type == "FAIL") {
-                errorMessage = "登录失败";
+                errorMessage = this.$t('message.loginFail');
             } else if (type == "OPERATION_FAIL") {
-                errorMessage = "操作失败";
+                errorMessage = this.$t('message.tips.errors.fail');
             }
 
-            this.$alert(errorMessage, "错误", {
-                confirmButtonText: "确定",
+            this.$alert(errorMessage, this.$t('message.error'), {
+                confirmButtonText: this.$t('message.confirm'),
                 type: "error"
             });
         }
@@ -77,20 +80,23 @@ var loginBlock = {
         <div>
             <div align="right" class="login-btn-group">
                 {{loginUserName}}
-                <el-button type="text" @click="openDialog()" v-if="loginUserName == null || loginUserName == ''">登录</el-button>
-                <el-button type="text" @click="logout()" v-else>注销</el-button>
+                <el-button type="text" @click="openDialog()" v-if="loginUserName == null || loginUserName == ''">{{$t('message.login')}}</el-button>
+                <el-button type="text" @click="logout()" v-else>{{$t('message.logout')}}</el-button>
+                <el-divider direction="vertical"></el-divider>
+                <el-button type="text" @click="changeLanguaue('zh')" :disabled="$i18n.locale=='zh'">中文</el-button>
+                <el-button type="text" @click="changeLanguaue('en')" :disabled="$i18n.locale=='en'">English</el-button>
             </div>
-            <el-dialog title="登录" :visible.sync="visible" :close-on-click-modal=false>
-                <el-form :model="user" label-position="left" label-width="80px">
-                    <el-form-item label="用户名" required>
-                        <el-input v-model="user.name" placeholder="请输入用户名" required></el-input>
+            <el-dialog :title="$t('message.login')" :visible.sync="visible" :close-on-click-modal=false>
+                <el-form :model="user" label-position="left" label-width="100px">
+                    <el-form-item :label="$t('message.username')" required>
+                        <el-input v-model="user.name" :placeholder="$t('message.tips.input.username')" required></el-input>
                     </el-form-item>
-                    <el-form-item label="密码" required>
-                        <el-input v-model="user.password" placeholder="请输入密码" show-password required></el-input>
+                    <el-form-item :label="$t('message.password')" required>
+                        <el-input v-model="user.password" :placeholder="$t('message.tips.input.password')" show-password required></el-input>
                     </el-form-item>
                     <el-form-item align="right">
-                        <el-button type="primary" @click="login()">登录</el-button>
-                        <el-button @click="visible=false">取消</el-button>
+                        <el-button type="primary" @click="login()">{{$t('message.login')}}</el-button>
+                        <el-button @click="visible=false">{{$t('message.cancel')}}</el-button>
                     </el-form-item>
                 </el-form>
             </el-dialog>
